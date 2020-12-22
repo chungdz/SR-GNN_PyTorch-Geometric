@@ -29,7 +29,7 @@ def forward(model, loader, device, writer, epoch, top_k=20, scheduler=None, opti
         if train_flag:
             loss.backward()
             optimizer.step()
-            scheduler.step()
+            # scheduler.step()
             writer.add_scalar('loss/train_batch_loss', loss.item(), epoch * updates_per_epoch + i)
         else:
             sub_scores = scores.topk(top_k)[1]    # batch * top_k
