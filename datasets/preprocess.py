@@ -211,16 +211,20 @@ print('avg length: ', all/(len(tra_seqs) + len(tes_seqs) * 1.0))
 if opt.dataset == 'diginetica':
     if not os.path.exists('diginetica'):
         os.makedirs('diginetica')
-    pickle.dump(tra, open('diginetica/train.txt', 'wb'))
-    pickle.dump(tes, open('diginetica/test.txt', 'wb'))
-    pickle.dump(tra_seqs, open('diginetica/all_train_seq.txt', 'wb'))
+    pickle.dump(tra, open('diginetica/raw/train.txt', 'wb'))
+    pickle.dump(tes, open('diginetica/raw/test.txt', 'wb'))
+    pickle.dump(tra_seqs, open('diginetica/raw/all_train_seq.txt', 'wb'))
 elif opt.dataset == 'yoochoose':
     if not os.path.exists('yoochoose1_4'):
         os.makedirs('yoochoose1_4')
+        os.makedirs('yoochoose1_4/raw')
+        os.makedirs('yoochoose1_4/processed')
     if not os.path.exists('yoochoose1_64'):
         os.makedirs('yoochoose1_64')
-    pickle.dump(tes, open('yoochoose1_4/test.txt', 'wb'))
-    pickle.dump(tes, open('yoochoose1_64/test.txt', 'wb'))
+        os.makedirs('yoochoose1_64/raw')
+        os.makedirs('yoochoose1_64/processed')
+    pickle.dump(tes, open('yoochoose1_4/raw/test.txt', 'wb'))
+    pickle.dump(tes, open('yoochoose1_64/raw/test.txt', 'wb'))
 
     split4, split64 = int(len(tr_seqs) / 4), int(len(tr_seqs) / 64)
     print(len(tr_seqs[-split4:]))
@@ -229,17 +233,17 @@ elif opt.dataset == 'yoochoose':
     tra4, tra64 = (tr_seqs[-split4:], tr_labs[-split4:]), (tr_seqs[-split64:], tr_labs[-split64:])
     seq4, seq64 = tra_seqs[tr_ids[-split4]:], tra_seqs[tr_ids[-split64]:]
 
-    pickle.dump(tra4, open('yoochoose1_4/train.txt', 'wb'))
-    pickle.dump(seq4, open('yoochoose1_4/all_train_seq.txt', 'wb'))
+    pickle.dump(tra4, open('yoochoose1_4/raw/train.txt', 'wb'))
+    pickle.dump(seq4, open('yoochoose1_4/raw/all_train_seq.txt', 'wb'))
 
-    pickle.dump(tra64, open('yoochoose1_64/train.txt', 'wb'))
-    pickle.dump(seq64, open('yoochoose1_64/all_train_seq.txt', 'wb'))
+    pickle.dump(tra64, open('yoochoose1_64/raw/train.txt', 'wb'))
+    pickle.dump(seq64, open('yoochoose1_64/raw/all_train_seq.txt', 'wb'))
 
 else:
     if not os.path.exists('sample'):
         os.makedirs('sample')
-    pickle.dump(tra, open('sample/train.txt', 'wb'))
-    pickle.dump(tes, open('sample/test.txt', 'wb'))
-    pickle.dump(tra_seqs, open('sample/all_train_seq.txt', 'wb'))
+    pickle.dump(tra, open('sample/raw/train.txt', 'wb'))
+    pickle.dump(tes, open('sample/raw/test.txt', 'wb'))
+    pickle.dump(tra_seqs, open('sample/raw/all_train_seq.txt', 'wb'))
 
 print('Done.')
