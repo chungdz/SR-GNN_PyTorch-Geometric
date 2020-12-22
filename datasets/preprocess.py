@@ -90,6 +90,7 @@ for s in sess_clicks:
 
 sorted_counts = sorted(iid_counts.items(), key=operator.itemgetter(1))
 
+# 只保留出现次数大于5的item，并且如果session删改后小于2，删除
 length = len(sess_clicks)
 for s in list(sess_clicks):
     curseq = sess_clicks[s]
@@ -173,7 +174,7 @@ def obtian_tes():
         test_seqs += [outseq]
     return test_ids, test_dates, test_seqs
 
-
+# seesion id, session dates, session sequence
 tra_ids, tra_dates, tra_seqs = obtian_tra()
 tes_ids, tes_dates, tes_seqs = obtian_tes()
 
@@ -192,7 +193,7 @@ def process_seqs(iseqs, idates):
             ids += [id]
     return out_seqs, out_dates, labs, ids
 
-
+# 最后一天作为标签，并且生成大量子session
 tr_seqs, tr_dates, tr_labs, tr_ids = process_seqs(tra_seqs, tra_dates)
 te_seqs, te_dates, te_labs, te_ids = process_seqs(tes_seqs, tes_dates)
 tra = (tr_seqs, tr_labs)
