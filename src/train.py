@@ -9,7 +9,7 @@ import numpy as np
 import logging
 
 
-def forward(model, loader, device, writer, epoch, top_k=20, optimizer=None, train_flag=True):
+def forward(model, loader, device, writer, epoch, top_k=20, scheduler=None, optimizer=None, train_flag=True):
     if train_flag:
         model.train()
     else:
@@ -29,6 +29,7 @@ def forward(model, loader, device, writer, epoch, top_k=20, optimizer=None, trai
         if train_flag:
             loss.backward()
             optimizer.step()
+            scheduler.step()
             writer.add_scalar('loss/train_batch_loss', loss.item(), epoch * updates_per_epoch + i)
         else:
             sub_scores = scores.topk(top_k)[1]    # batch * top_k
@@ -43,9 +44,12 @@ def forward(model, loader, device, writer, epoch, top_k=20, optimizer=None, trai
 
     if train_flag:
         writer.add_scalar('loss/train_loss', mean_loss.item(), epoch)
+        print('loss/train_loss', mean_loss.item(), epoch)
     else:
         writer.add_scalar('loss/test_loss', mean_loss.item(), epoch)
         hit = np.mean(hit) * 100
         mrr = np.mean(mrr) * 100
         writer.add_scalar('index/hit', hit, epoch)
         writer.add_scalar('index/mrr', mrr, epoch)
+        print('index/hit', hit, epoch)
+        print('index/mrr', mrr, epoch)

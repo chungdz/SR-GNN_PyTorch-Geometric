@@ -64,8 +64,7 @@ def main():
     logging.warning(model)
     
     for epoch in tqdm(range(opt.epoch)):
-        scheduler.step()
-        forward(model, train_loader, device, writer, epoch, top_k=opt.top_k, optimizer=optimizer, train_flag=True)
+        forward(model, train_loader, device, writer, epoch, top_k=opt.top_k, scheduler=scheduler, optimizer=optimizer, train_flag=True)
         with torch.no_grad():
             forward(model, test_loader, device, writer, epoch, top_k=opt.top_k, train_flag=False)
 
