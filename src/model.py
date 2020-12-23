@@ -63,7 +63,7 @@ class GNNModel(nn.Module):
             weight.data.uniform_(-stdv, stdv)
 
     def forward(self, data):
-        x, edge_index, batch = data.x - 1, data.edge_index, data.batch
+        x, edge_index, batch, seq = data.x - 1, data.edge_index, data.batch, data.sequences
 
         embedding = self.embedding(x).squeeze()
         hidden = self.gated(embedding, edge_index)
