@@ -23,7 +23,7 @@ def forward(model, loader, device, writer, epoch, top_k=20, scheduler=None, opti
         if train_flag:
             optimizer.zero_grad()
         scores = model(batch.to(device))
-        targets = batch.y - 1
+        targets = batch.y
         loss = model.loss_function(scores, targets)
 
         if train_flag:
