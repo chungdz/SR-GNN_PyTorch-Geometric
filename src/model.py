@@ -41,6 +41,36 @@ class Embedding2Score(nn.Module):
         
         return z_i_hat
 
+class DynamicScore(nn.Module):
+    def __init__(self, hidden_size, n_node, embedding):
+        super(DynamicScore, self).__init__()
+        self.hidden_size = hidden_size
+        self.state_lstm = nn.LSTM(self.hidden_size, self.hidden_size)
+        self.residual_lstm = nn.LSTM(self.hidden_size, self.hidden_size)
+        # self.embedding = nn.Embedding(n_node, self.hidden_size)
+        self.embedding = embedding
+
+    def forward(self, seq):
+        seq_len = seq.size(1)
+        seq = self.embedding(seq)
+        # seq batch_size, seq_size, hidden_size
+        seq = seq.permute(1, 0, 2)
+        state_seq, (final_state, _c) = self.state_lstm(seq)
+
+        residual_list = []
+        for i in range(1, seq_len):
+            residual_list.append(state_seq[i] - state_seq[i - 1])
+        residual = torch.stack(residual_list, dim=0)
+
+        _seq, (final_residual, _c) = self.residual_lstm(residual)
+
+        next_state = (final_state + final_residual).reshape(-1, self.hidden_size)
+
+        # Eq(8)
+        score_2 = torch.mm(next_state, self.embedding.weight.transpose(1, 0))
+        
+        return score_2
+
 
 class GNNModel(nn.Module):
     """
@@ -54,6 +84,7 @@ class GNNModel(nn.Module):
         self.embedding = nn.Embedding(self.n_node, self.hidden_size)
         self.gated = GatedGraphConv(self.hidden_size, num_layers=1)
         self.e2s = Embedding2Score(self.hidden_size)
+        self.dynamic = DynamicScore(self.hidden_size, self.n_node, self.embedding)
         self.loss_function = nn.CrossEntropyLoss()
         self.reset_parameters()
         
@@ -69,4 +100,4 @@ class GNNModel(nn.Module):
         hidden = self.gated(embedding, edge_index)
         hidden2 = F.relu(hidden)
   
-        return self.e2s(hidden2, self.embedding, batch)
+        return self.e2s(hidden2, self.embedding, batch) + self.dynamic(seq)
