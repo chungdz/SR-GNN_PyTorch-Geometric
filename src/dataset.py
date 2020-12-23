@@ -55,8 +55,21 @@ class MultiSessionsGraph(InMemoryDataset):
             x = torch.tensor(x, dtype=torch.long)
             y = torch.tensor([y], dtype=torch.long)
             curdata = Data(x=x, edge_index=edge_index, y=y)
-            curdata.sequences = torch.LongTensor(sequences).unsqueeze(0)
+            curdata.sequences = torch.LongTensor(self.trim_seq(sequences)).unsqueeze(0)
             data_list.append(curdata)
             
         data, slices = self.collate(data_list)
         torch.save((data, slices), self.processed_paths[0])
+    
+    @staticmethod
+    def trim_seq(seq, length=20):
+        slen = len(seq)
+
+        if slen >= length:
+            return seq[-length:]
+        else:
+            new_seq = []
+            for t in range(length - slen):
+                new_seq.append(0)
+            return new_seq + seq
+        

@@ -50,9 +50,9 @@ def main():
     writer = SummaryWriter(log_dir)
 
     if opt.dataset == 'diginetica':
-        n_node = 43097
+        n_node = 43098
     elif opt.dataset == 'yoochoose1_64' or opt.dataset == 'yoochoose1_4':
-        n_node = 37483
+        n_node = 37484
     else:
         n_node = 309
 

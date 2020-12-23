@@ -175,7 +175,7 @@ def obtian_tes():
         test_seqs += [outseq]
     return test_ids, test_dates, test_seqs
 
-# seesion id, session dates, session sequence
+# session id, session dates, session sequence
 tra_ids, tra_dates, tra_seqs = obtian_tra()
 tes_ids, tes_dates, tes_seqs = obtian_tes()
 
