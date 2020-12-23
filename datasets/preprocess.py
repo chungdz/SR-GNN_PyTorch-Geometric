@@ -14,6 +14,7 @@ import operator
 import datetime
 import os
 import numpy as np
+import json
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--dataset', default='sample', help='dataset name: diginetica/yoochoose/sample')
@@ -132,6 +133,7 @@ print("-- Splitting train set and test set @ %ss" % datetime.datetime.now())
 
 # Choosing item count >=5 gives approximately the same number of items as reported in paper
 item_dict = {}
+item['<pad>'] = 0
 # Convert training sessions to sequences and renumber items to start from 1
 def obtian_tra():
     train_ids = []
@@ -219,6 +221,7 @@ if opt.dataset == 'diginetica':
     pickle.dump(tra, open('diginetica/raw/train.txt', 'wb'))
     pickle.dump(tes, open('diginetica/raw/test.txt', 'wb'))
     pickle.dump(tra_seqs, open('diginetica/raw/all_train_seq.txt', 'wb'))
+    json.dump(item_dict, open('diginetica/', 'w', encoding='utf-8'))
 elif opt.dataset == 'yoochoose':
     if not os.path.exists('yoochoose1_4'):
         os.makedirs('yoochoose1_4')
@@ -240,9 +243,10 @@ elif opt.dataset == 'yoochoose':
 
     pickle.dump(tra4, open('yoochoose1_4/raw/train.txt', 'wb'))
     pickle.dump(seq4, open('yoochoose1_4/raw/all_train_seq.txt', 'wb'))
-
+    json.dump(item_dict, open('yoochoose1_4/', 'w', encoding='utf-8'))
     pickle.dump(tra64, open('yoochoose1_64/raw/train.txt', 'wb'))
     pickle.dump(seq64, open('yoochoose1_64/raw/all_train_seq.txt', 'wb'))
+    json.dump(item_dict, open('yoochoose1_64/', 'w', encoding='utf-8'))
 
 else:
     if not os.path.exists('sample'):
@@ -250,5 +254,6 @@ else:
     pickle.dump(tra, open('sample/raw/train.txt', 'wb'))
     pickle.dump(tes, open('sample/raw/test.txt', 'wb'))
     pickle.dump(tra_seqs, open('sample/raw/all_train_seq.txt', 'wb'))
+    json.dump(item_dict, open('sample/', 'w', encoding='utf-8'))
 
 print('Done.')
