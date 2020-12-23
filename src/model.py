@@ -21,7 +21,7 @@ class Embedding2Score(nn.Module):
         self.q = nn.Linear(self.hidden_size, 1)
         self.W_3 = nn.Linear(2 * self.hidden_size, self.hidden_size)
 
-    def forward(self, session_embedding, all_item_embedding, batch):
+    def forward(self, session_embedding, batch):
         sections = torch.bincount(batch)
         v_i = torch.split(session_embedding, tuple(sections.cpu().numpy()))    # split whole x back into graphs G_i
         v_n_repeat = tuple(nodes[-1].view(1, -1).repeat(nodes.shape[0], 1) for nodes in v_i)    # repeat |V|_i times for the last node embedding
@@ -37,22 +37,22 @@ class Embedding2Score(nn.Module):
         s_h = self.W_3(torch.cat((torch.cat(v_n, dim=0), torch.cat(s_g, dim=0)), dim=1))
         
         # Eq(8)
-        z_i_hat = torch.mm(s_h, all_item_embedding.weight.transpose(1, 0))
+        # z_i_hat = torch.mm(s_h, all_item_embedding.weight.transpose(1, 0))
         
-        return z_i_hat
+        return s_h
 
 class DynamicScore(nn.Module):
-    def __init__(self, hidden_size, n_node, embedding):
+    def __init__(self, hidden_size, n_node):
         super(DynamicScore, self).__init__()
         self.hidden_size = hidden_size
         self.state_lstm = nn.LSTM(self.hidden_size, self.hidden_size)
         self.residual_lstm = nn.LSTM(self.hidden_size, self.hidden_size)
+        self.norm = nn.LayerNorm(self.hidden_size)
         # self.embedding = nn.Embedding(n_node, self.hidden_size)
-        self.embedding = embedding
+        # self.embedding = embedding
 
     def forward(self, seq):
         seq_len = seq.size(1)
-        seq = self.embedding(seq)
         # seq batch_size, seq_size, hidden_size
         seq = seq.permute(1, 0, 2)
         state_seq, (final_state, _c) = self.state_lstm(seq)
@@ -64,12 +64,12 @@ class DynamicScore(nn.Module):
 
         _seq, (final_residual, _c) = self.residual_lstm(residual)
 
-        next_state = (final_state + final_residual).reshape(-1, self.hidden_size)
+        next_state = self.norm(final_state + final_residual).reshape(-1, self.hidden_size)
 
         # Eq(8)
-        score_2 = torch.mm(next_state, self.embedding.weight.transpose(1, 0))
+        # score_2 = torch.mm(next_state, self.embedding.weight.transpose(1, 0))
         
-        return score_2
+        return next_state
 
 
 class GNNModel(nn.Module):
@@ -84,9 +84,14 @@ class GNNModel(nn.Module):
         self.embedding = nn.Embedding(self.n_node, self.hidden_size)
         self.gated = GatedGraphConv(self.hidden_size, num_layers=1)
         self.e2s = Embedding2Score(self.hidden_size)
-        self.dynamic = DynamicScore(self.hidden_size, self.n_node, self.embedding)
+        self.dynamic = DynamicScore(self.hidden_size, self.n_node)
         self.loss_function = nn.CrossEntropyLoss()
         self.reset_parameters()
+
+        self.weight_layer = nn.Sequential(
+            nn.Linear(self.hidden_size * 2, 1),
+            nn.Sigmoid()
+        )
         
     def reset_parameters(self):
         stdv = 1.0 / math.sqrt(self.hidden_size)
@@ -96,8 +101,16 @@ class GNNModel(nn.Module):
     def forward(self, data):
         x, edge_index, batch, seq = data.x - 1, data.edge_index, data.batch, data.sequences
 
+        seq = self.embedding(seq)
         embedding = self.embedding(x).squeeze()
         hidden = self.gated(embedding, edge_index)
         hidden2 = F.relu(hidden)
   
-        return self.e2s(hidden2, self.embedding, batch) + self.dynamic(seq)
+        static = self.e2s(hidden2, batch)
+        dynamic = self.dynamic(seq)
+
+        user_weight = self.weight_layer(torch.cat([static, dynamic], dim=-1))
+        hybird_state = user_weight * static + (1.0-user_weight) * dynamic
+        score = torch.mm(hybird_state, self.embedding.weight.transpose(1, 0))
+        
+        return score
