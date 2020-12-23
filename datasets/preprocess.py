@@ -13,6 +13,7 @@ import pickle
 import operator
 import datetime
 import os
+import numpy as np
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--dataset', default='sample', help='dataset name: diginetica/yoochoose/sample')
@@ -152,7 +153,7 @@ def obtian_tra():
         train_ids += [s]
         train_dates += [date]
         train_seqs += [outseq]
-    print(item_ctr)     # 43098, 37484
+    print('item count', item_ctr)     # 43098, 37484
     return train_ids, train_dates, train_seqs
 
 
@@ -202,13 +203,16 @@ print(len(tr_seqs))
 print(len(te_seqs))
 print(tr_seqs[:3], tr_dates[:3], tr_labs[:3])
 print(te_seqs[:3], te_dates[:3], te_labs[:3])
-all = 0
+all_length = []
 
 for seq in tra_seqs:
-    all += len(seq)
+    all_length.append(len(seq))
 for seq in tes_seqs:
-    all += len(seq)
-print('avg length: ', all/(len(tra_seqs) + len(tes_seqs) * 1.0))
+    all_length.append(len(seq))
+
+seq_unique, seq_counts = np.unique(all_length, return_counts=True)
+print('avg length: ', seq_unique, seq_counts)
+
 if opt.dataset == 'diginetica':
     if not os.path.exists('diginetica'):
         os.makedirs('diginetica')
