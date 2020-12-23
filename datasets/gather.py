@@ -9,7 +9,7 @@ CUDA_VISIBLE_DEVICES=0,1,2 python training.py training.gpus=3
 import os
 import argparse
 from tqdm import tqdm
-import json
+import pickle
 import scipy.stats as ss
 import numpy as np
 import pandas as pd
@@ -25,8 +25,8 @@ def gather(cfg, filenum):
     hit, mrr = [], []
 
     for i in range(filenum):
-        with open(output_path + 'tmp_{}.json'.format(i), 'r', encoding='utf-8') as f:
-            cur_result = json.load(f)
+        with open(output_path + 'tmp_{}.pkl'.format(i), 'rb') as f:
+            cur_result = pickle.load(f)
         hit += cur_result['hit']
         mrr += cur_result['mrr']
     

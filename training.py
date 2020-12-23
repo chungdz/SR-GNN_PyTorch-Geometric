@@ -9,6 +9,7 @@ CUDA_VISIBLE_DEVICES=0,1,2 python training.py training.gpus=3
 import os
 import argparse
 import json
+import pickle
 from tqdm import tqdm
 import time
 import hydra
@@ -21,8 +22,8 @@ import logging
 from torch_geometric.data import DataLoader
 import math
 from datasets.graph_datasets import MultiSessionsGraph
-from gather import gather as gather_all
-from models.model import GNNModel
+from datasets.gather import gather as gather_all
+from src.model import GNNModel
 from utils.log_util import convert_omegaconf_to_dict
 from utils.train_util import set_seed
 from utils.train_util import save_checkpoint_by_epoch
@@ -30,7 +31,7 @@ from utils.eval_util import group_labels
 from utils.eval_util import cal_metric
 
 
-def run(cfg: DictConfig, rank: int, device: torch.device, finished: mp.Value, train_dataset: NewsDataset, valid_dataset: NewsDataset):
+def run(cfg: DictConfig, rank: int, device: torch.device, finished: mp.Value, train_dataset, valid_dataset):
     """
     train and evaluate
     :param args: config
@@ -40,16 +41,16 @@ def run(cfg: DictConfig, rank: int, device: torch.device, finished: mp.Value, tr
     :return:
     """
     
-    set_seed(cfg.training.seed)
+    set_seed(7)
     print("Worker %d is setting dataset ... " % rank)
     # Build Dataloader
     train_data_loader = DataLoader(train_dataset, batch_size=cfg.batch_size, shuffle=True, drop_last=True)
     valid_data_loader = DataLoader(valid_dataset, batch_size=cfg.batch_size, shuffle=False)
 
     # # Build model.
-    model = GNNModel(hidden_size=opt.hidden_size, n_node=n_node)
-    # model = build_model(cfg)
-    #
+    model = GNNModel(hidden_size=cfg.hidden_size, n_node=cfg.n_node)
+    model.to(device)
+
     # Build optimizer.
     steps_one_epoch = len(train_data_loader) // cfg.accu
     train_steps = cfg.epoch * steps_one_epoch
@@ -57,10 +58,6 @@ def run(cfg: DictConfig, rank: int, device: torch.device, finished: mp.Value, tr
     optimizer = torch.optim.Adam(model.parameters(), lr=cfg.lr, weight_decay=cfg.l2)
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=cfg.lr_dc_step, gamma=cfg.lr_dc)
 
-    model.title_embedding = model.title_embedding.to(device)
-    model.to(device)
-    
-    
     print("Worker %d is working ... " % rank)
     # Fast check the validation process
     if (cfg.gpus < 2) or (cfg.gpus > 1 and rank == 0):
@@ -79,7 +76,7 @@ def run(cfg: DictConfig, rank: int, device: torch.device, finished: mp.Value, tr
         finished.value += 1
 
         if (cfg.gpus < 2) or (cfg.gpus > 1 and rank == 0):
-            save_checkpoint_by_epoch(model.state_dict(), epoch, cfg.checkpoint)
+            save_checkpoint_by_epoch(model.state_dict(), epoch, cfg.checkpoint_path)
 
             while finished.value < cfg.gpus:
                 time.sleep(1)
@@ -182,15 +179,15 @@ def validate(cfg, epoch, model, device, rank, valid_data_loader, fast_dev=False,
         tmp_dict['hit'] = hit
         tmp_dict['mrr'] = mrr
 
-        with open(cfg.dataset.result_path + 'tmp_{}.json'.format(rank), 'w', encoding='utf-8') as f:
-            json.dump(tmp_dict, f)
+        with open(cfg.result_path + 'tmp_{}.pkl'.format(rank), 'wb') as f:
+            pickle.dump(tmp_dict, f)
         f.close()
 
 
 def init_processes(cfg, local_rank, vocab, dataset, valid_dataset, finished, fn, backend='nccl'):
     """ Initialize the distributed environment. """
     addr = "localhost"
-    port = cfg.training.master_port
+    port = 9237
     os.environ['MASTER_ADDR'] = addr
     os.environ['MASTER_PORT'] = str(port)
     dist.init_process_group(backend, rank=0 + local_rank,
