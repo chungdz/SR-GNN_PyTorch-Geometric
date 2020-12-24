@@ -187,7 +187,7 @@ def validate(cfg, epoch, model, device, rank, valid_data_loader, fast_dev=False,
 def init_processes(cfg, local_rank, vocab, dataset, valid_dataset, finished, fn, backend='nccl'):
     """ Initialize the distributed environment. """
     addr = "localhost"
-    port = 9237
+    port = cfg.port
     os.environ['MASTER_ADDR'] = addr
     os.environ['MASTER_PORT'] = str(port)
     dist.init_process_group(backend, rank=0 + local_rank,
@@ -257,6 +257,7 @@ if __name__ == '__main__':
     parser.add_argument('--lr_dc_step', type=int, default=3, help='the number of steps after which the learning rate decay')
     parser.add_argument('--l2', type=float, default=1e-5, help='l2 penalty')  # [0.001, 0.0005, 0.0001, 0.00005, 0.00001]
     parser.add_argument('--top_k', type=int, default=20, help='top K indicator for evaluation')
+    parser.add_argument('--port', type=int, default=9337)
     opt = parser.parse_args()
     logging.warning(opt)
 
