@@ -8,10 +8,10 @@ import os
 import argparse
 import logging
 from tqdm import tqdm
-from dataset import MultiSessionsGraph
+from datasets.graph_datasets import MultiSessionsGraph
 from torch_geometric.data import DataLoader
-from model import *
-from train import forward
+from src.model import *
+from src.train import forward
 from tensorboardX import SummaryWriter
 
 

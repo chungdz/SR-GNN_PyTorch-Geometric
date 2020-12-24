@@ -62,7 +62,7 @@ class MultiSessionsGraph(InMemoryDataset):
         torch.save((data, slices), self.processed_paths[0])
     
     @staticmethod
-    def trim_seq(seq, length=20):
+    def trim_seq(seq, length=30):
         slen = len(seq)
 
         if slen >= length:
