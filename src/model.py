@@ -11,36 +11,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch_geometric.nn import GCNConv, GATConv, GatedGraphConv
 
-
-class Embedding2Score(nn.Module):
-    def __init__(self, hidden_size):
-        super(Embedding2Score, self).__init__()
-        self.hidden_size = hidden_size
-        self.W_1 = nn.Linear(self.hidden_size, self.hidden_size)
-        self.W_2 = nn.Linear(self.hidden_size, self.hidden_size)
-        self.q = nn.Linear(self.hidden_size, 1)
-        self.W_3 = nn.Linear(2 * self.hidden_size, self.hidden_size)
-
-    def forward(self, session_embedding, batch):
-        sections = torch.bincount(batch)
-        v_i = torch.split(session_embedding, tuple(sections.cpu().numpy()))    # split whole x back into graphs G_i
-        v_n_repeat = tuple(nodes[-1].view(1, -1).repeat(nodes.shape[0], 1) for nodes in v_i)    # repeat |V|_i times for the last node embedding
-
-        # Eq(6)
-        alpha = self.q(torch.sigmoid(self.W_1(torch.cat(v_n_repeat, dim=0)) + self.W_2(session_embedding)))    # |V|_i * 1
-        s_g_whole = alpha * session_embedding    # |V|_i * hidden_size
-        s_g_split = torch.split(s_g_whole, tuple(sections.cpu().numpy()))    # split whole s_g into graphs G_i
-        s_g = tuple(torch.sum(embeddings, dim=0).view(1, -1) for embeddings in s_g_split)
-        
-        # Eq(7)
-        v_n = tuple(nodes[-1].view(1, -1) for nodes in v_i)
-        s_h = self.W_3(torch.cat((torch.cat(v_n, dim=0), torch.cat(s_g, dim=0)), dim=1))
-        
-        # Eq(8)
-        # z_i_hat = torch.mm(s_h, all_item_embedding.weight.transpose(1, 0))
-        
-        return s_h
-
 class DynamicScore(nn.Module):
     def __init__(self, hidden_size, n_node):
         super(DynamicScore, self).__init__()
@@ -88,16 +58,9 @@ class GNNModel(nn.Module):
         super(GNNModel, self).__init__()
         self.hidden_size, self.n_node = hidden_size, n_node
         self.embedding = nn.Embedding(self.n_node, self.hidden_size)
-        self.gated = GatedGraphConv(self.hidden_size, num_layers=1)
-        self.e2s = Embedding2Score(self.hidden_size)
         self.dynamic = DynamicScore(self.hidden_size, self.n_node)
         self.loss_function = nn.CrossEntropyLoss()
         self.reset_parameters()
-
-        self.weight_layer = nn.Sequential(
-            nn.Linear(self.hidden_size * 2, 1),
-            nn.Sigmoid()
-        )
         
     def reset_parameters(self):
         stdv = 1.0 / math.sqrt(self.hidden_size)
@@ -110,15 +73,8 @@ class GNNModel(nn.Module):
         seq = self.embedding(seq)
         y = self.embedding(y).unsqueeze(1)
 
-        embedding = self.embedding(x).squeeze()
-        hidden = self.gated(embedding, edge_index)
-        hidden2 = F.relu(hidden)
-  
-        static = self.e2s(hidden2, batch)
         dynamic, MSELoss = self.dynamic(seq, y)
 
-        user_weight = self.weight_layer(torch.cat([static, dynamic], dim=-1))
-        hybird_state = user_weight * static + (1.0-user_weight) * dynamic
-        score = torch.mm(hybird_state, self.embedding.weight.transpose(1, 0))
+        score = torch.mm(dynamic, self.embedding.weight.transpose(1, 0))
         
         return score, MSELoss
