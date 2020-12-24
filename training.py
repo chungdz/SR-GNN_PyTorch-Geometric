@@ -123,8 +123,8 @@ def train(cfg, epoch, rank, model, loader, optimizer, steps_one_epoch, device):
         # data = {key: value.to(device) for key, value in data.items()}
         data = data.to(device)
         # 1. Forward
-        scores = model(data)
-        loss = model.loss_function(scores, data.y)
+        scores, MSELoss = model(data)
+        loss = model.loss_function(scores, data.y) + 0.1 * MSELoss
 
         if cfg.accu > 1:
             loss = loss / cfg.accu
@@ -164,7 +164,7 @@ def validate(cfg, epoch, model, device, rank, valid_data_loader, fast_dev=False,
             if fast_dev and i > 10:
                 break
 
-            scores = model(data.to(device))
+            scores, _ = model(data.to(device))
             targets = data.y
 
             sub_scores = scores.topk(top_k)[1]

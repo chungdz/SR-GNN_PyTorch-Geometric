@@ -48,14 +48,20 @@ class DynamicScore(nn.Module):
         self.state_lstm = nn.LSTM(self.hidden_size, self.hidden_size)
         self.residual_lstm = nn.LSTM(self.hidden_size, self.hidden_size)
         self.norm = nn.LayerNorm(self.hidden_size)
+        self.loss = nn.MSELoss()
         # self.embedding = nn.Embedding(n_node, self.hidden_size)
         # self.embedding = embedding
 
-    def forward(self, seq):
+    def forward(self, seq, y):
         seq_len = seq.size(1)
         # seq batch_size, seq_size, hidden_size
         seq = seq.permute(1, 0, 2)
-        state_seq, (final_state, _c) = self.state_lstm(seq)
+        state_seq, (final_state, final_cell) = self.state_lstm(seq)
+
+        y = y.permute(1, 0, 2)
+        # y 1, batch_size, hidden_size
+        real_state, (_h, _c) = self.state_lstm(y, (final_state, final_cell))
+        real_state = real_state.reshape(-1, self.hidden_size)
 
         residual_list = []
         for i in range(1, seq_len):
@@ -69,7 +75,7 @@ class DynamicScore(nn.Module):
         # Eq(8)
         # score_2 = torch.mm(next_state, self.embedding.weight.transpose(1, 0))
         
-        return next_state
+        return next_state, self.loss(next_state, real_state)
 
 
 class GNNModel(nn.Module):
@@ -99,18 +105,20 @@ class GNNModel(nn.Module):
             weight.data.uniform_(-stdv, stdv)
 
     def forward(self, data):
-        x, edge_index, batch, seq = data.x - 1, data.edge_index, data.batch, data.sequences
+        x, edge_index, batch, seq, y = data.x - 1, data.edge_index, data.batch, data.sequences, data.y
 
         seq = self.embedding(seq)
+        y = self.embedding(y).unsqueeze(1)
+
         embedding = self.embedding(x).squeeze()
         hidden = self.gated(embedding, edge_index)
         hidden2 = F.relu(hidden)
   
         static = self.e2s(hidden2, batch)
-        dynamic = self.dynamic(seq)
+        dynamic, MSELoss = self.dynamic(seq, y)
 
         user_weight = self.weight_layer(torch.cat([static, dynamic], dim=-1))
         hybird_state = user_weight * static + (1.0-user_weight) * dynamic
         score = torch.mm(hybird_state, self.embedding.weight.transpose(1, 0))
         
-        return score
+        return score, MSELoss
