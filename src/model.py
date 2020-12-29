@@ -12,12 +12,13 @@ import torch.nn.functional as F
 from torch_geometric.nn import GCNConv, GATConv, GatedGraphConv
 
 class DynamicScore(nn.Module):
-    def __init__(self, hidden_size, n_node, layer_num=3):
+    def __init__(self, hidden_size, n_node):
         super(DynamicScore, self).__init__()
         self.hidden_size = hidden_size
         self.state_lstm = nn.LSTM(self.hidden_size, self.hidden_size)
-        self.layer_num = layer_num
-        self.residual_lstms = nn.ModuleList([nn.LSTM(self.hidden_size, self.hidden_size) for k in range(layer_num)])
+        self.residual_lstm = nn.LSTM(self.hidden_size, self.hidden_size)
+        self.residual2_lstm = nn.LSTM(self.hidden_size, self.hidden_size)
+        self.residual3_lstm = nn.LSTM(self.hidden_size, self.hidden_size)
         self.norm = nn.LayerNorm(self.hidden_size)
         self.loss = nn.MSELoss()
         # self.embedding = nn.Embedding(n_node, self.hidden_size)
@@ -29,21 +30,25 @@ class DynamicScore(nn.Module):
         seq = seq.permute(1, 0, 2)
         state_seq, (final_state, final_cell) = self.state_lstm(seq)
 
-        cur_seq = state_seq
-        cur_len = seq_len
-        cur_state = final_state
+        residual_list = []
+        for i in range(1, seq_len):
+            residual_list.append(state_seq[i] - state_seq[i - 1])
+        residual = torch.stack(residual_list, dim=0)
+        residual_seq, (final_residual, final_residual_cell) = self.residual_lstm(residual)
 
-        for l in range(self.layer_num):
+        residual_list2 = []
+        for i in range(1, seq_len - 1):
+            residual_list2.append(residual_seq[i] - residual_seq[i - 1])
+        residual2 = torch.stack(residual_list2, dim=0)
+        residual2_seq, (final_residual2, final_residual_cell2) = self.residual2_lstm(residual2)
 
-            residual_list = []
-            for i in range(1, cur_len):
-                residual_list.append(cur_seq[i] - cur_seq[i - 1])
-            residual = torch.stack(residual_list, dim=0)
-            cur_seq, (final_residual, final_residual_cell) = self.residual_lstms[l](residual)
-            cur_state += final_residual
-            cur_len = cur_len - 1
+        residual_list3 = []
+        for i in range(1, seq_len - 2):
+            residual_list3.append(residual2_seq[i] - residual2_seq[i - 1])
+        residual3 = torch.stack(residual_list3, dim=0)
+        residual3_seq, (final_residual3, final_residual_cell3) = self.residual3_lstm(residual3)
 
-        next_state = self.norm(cur_state).reshape(-1, self.hidden_size)
+        next_state = self.norm(final_state + final_residual + final_residual2 + final_residual3).reshape(-1, self.hidden_size)
 
         # news loss
         y = y.permute(1, 0, 2)
