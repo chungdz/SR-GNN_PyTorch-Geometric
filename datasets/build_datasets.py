@@ -37,7 +37,7 @@ def build_subgraph(graph, hist_items, neighbor_items):
         source_nodes.append(edge[0])
         target_nodes.append(edge[1])
     edge_index = [source_nodes, target_nodes]
-    # assert(len(source_nodes) > 0)
+
     hist_mask = [1 if x in hist_items else 0 for x in all_items]
 
     return all_items, edge_index, hist_mask
@@ -58,7 +58,8 @@ def build_examples(rank, args, session_seq, graph, neighbor_dict, output_path):
     random.seed(7)
 
     data_list = []
-        
+    no_neighbor = 0
+    no_edge = 0
     for sequences, y in tqdm(zip(session_seq[0], session_seq[1])):
         item_set = set()
         cur_len = len(sequences)
@@ -68,12 +69,18 @@ def build_examples(rank, args, session_seq, graph, neighbor_dict, output_path):
                 item_set.add(item)
             if len(item_set) >= args.node_num:
                 break
+
         assert(len(item_set) > 0)
         neighbor_set = set()
         for item in item_set:
-            neighbor_set.union(neighbor_dict[item])
+            for n in neighbor_dict[item]:
+                neighbor_set.add(n)
 
         x, edge_index, hist_mask = build_subgraph(graph, item_set, neighbor_set)
+        if len(neighbor_set) < 1:
+            no_neighbor += 1
+        if len(edge_index[0]) < 1:
+            no_edge += 1
 
         x = torch.LongTensor(x).unsqueeze(1)
         y = torch.LongTensor([y])
@@ -85,6 +92,7 @@ def build_examples(rank, args, session_seq, graph, neighbor_dict, output_path):
 
     data, slices = MultiSessionsGraph.collate(data_list)
     torch.save((data, slices), output_path)
+    # print(no_neighbor, no_edge)
 
 
 def main(args):

@@ -56,7 +56,7 @@ def build_neighbors_dict(graph, max_neighbor_cnt=5):
         sorted_neighbors = sorted(dict(graph[ent]).items(), key=lambda item: -1 * item[1]['weight'])
         neighbors = [x[0] for x in sorted_neighbors][:max_neighbor_cnt]
         if len(neighbors) == 0:
-            continue
+            ent_neighbors_dict[ent] = []
         ent_neighbors_dict[ent] = list(set(neighbors))
 
     return ent_neighbors_dict
@@ -79,8 +79,8 @@ def main(cfg):
     for i in range(len(item_dict)):
         if not graph.has_node(i):
             graph.add_node(i)
-            graph.add_edge(0, i, weight=1)
-            graph.add_edge(i, 0, weight=1)
+            # graph.add_edge(0, i, weight=1)
+            # graph.add_edge(i, 0, weight=1)
 
     graph_path = os.path.join(cfg.dataset, "graph.bin")
     pickle.dump(graph, open(graph_path, 'wb'))
