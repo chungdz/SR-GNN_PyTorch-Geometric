@@ -156,7 +156,6 @@ class GNNModel(nn.Module):
         self.reset_parameters()
 
         self.gnn = GatNet(hidden_size, hidden_size)
-        self.gnn2 = GatNet(hidden_size, hidden_size)
         self.gate_layer = GateLayer(hidden_size, int(hidden_size / 2))
         self.pool = MaskGlobalAttention(self.gate_layer)
         self.weight_layer = nn.Sequential(
@@ -179,7 +178,6 @@ class GNNModel(nn.Module):
 
         nodes = self.graph_emb(x).squeeze()
         node_hiddens = self.gnn(nodes, edge_index)
-        node_hiddens = self.gnn2(node_hiddens, edge_index)
         pooled_hiddens = self.pool(x=node_hiddens, batch=batch, mask=hist_mask).squeeze()
 
         user_weight = self.weight_layer(torch.cat([dynamic, pooled_hiddens], dim=-1))
