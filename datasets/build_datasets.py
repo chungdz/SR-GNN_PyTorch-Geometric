@@ -37,7 +37,7 @@ def build_subgraph(graph, hist_items, neighbor_items):
         source_nodes.append(edge[0])
         target_nodes.append(edge[1])
     edge_index = [source_nodes, target_nodes]
-
+    # assert(len(source_nodes) > 0)
     hist_mask = [1 if x in hist_items else 0 for x in all_items]
 
     return all_items, edge_index, hist_mask
@@ -68,12 +68,13 @@ def build_examples(rank, args, session_seq, graph, neighbor_dict, output_path):
                 item_set.add(item)
             if len(item_set) >= args.node_num:
                 break
-        
+        assert(len(item_set) > 0)
         neighbor_set = set()
         for item in item_set:
             neighbor_set.union(neighbor_dict[item])
 
         x, edge_index, hist_mask = build_subgraph(graph, item_set, neighbor_set)
+
         x = torch.LongTensor(x).unsqueeze(1)
         y = torch.LongTensor([y])
         edge_index = torch.LongTensor(edge_index)

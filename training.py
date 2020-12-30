@@ -220,8 +220,8 @@ def main(cfg):
     
     set_seed(7)
     cur_dir = os.getcwd()
-    train_dataset = MultiSessionsGraph(cur_dir + '/datasets/' + cfg.dataset, phrase='train')
-    validate_dataset = MultiSessionsGraph(cur_dir + '/datasets/' + cfg.dataset, phrase='test')
+    train_dataset = MultiSessionsGraph(cur_dir + '/datasets/' + cfg.dataset, 'train', cfg.filenum)
+    validate_dataset = MultiSessionsGraph(cur_dir + '/datasets/' + cfg.dataset, 'test', cfg.filenum)
     item_dict = json.load(open(cur_dir + '/datasets/' + cfg.dataset + '/item_dict.json', 'r', encoding='utf-8'))
     cfg.n_node = len(item_dict)
     cfg.result_path = cur_dir + '/datasets/' + cfg.dataset + '/result/'
@@ -247,7 +247,8 @@ if __name__ == '__main__':
     mp.set_start_method('spawn')
     parser = argparse.ArgumentParser()
     parser.add_argument('--dataset', default='diginetica', help='dataset name: diginetica/yoochoose1_4/yoochoose1_64/sample')
-    parser.add_argument('--batch_size', type=int, default=100, help='input batch size')
+    parser.add_argument('--filenum', type=int, default=10)
+    parser.add_argument('--batch_size', type=int, default=128, help='input batch size')
     parser.add_argument('--hidden_size', type=int, default=100, help='hidden state size')
     parser.add_argument('--gpus', type=int, default=2, help='gpu_num')
     parser.add_argument('--accu', type=int, default=1, help='number of train time')

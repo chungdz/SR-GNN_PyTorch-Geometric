@@ -18,6 +18,7 @@ def build_entire_graph(train_data):
 
     for sequences, y in zip(train_data[0], train_data[1]):
         cur_len = len(sequences)
+        assert(cur_len > 0)
         if cur_len < 2:
             continue
         if cur_len == 2:
@@ -65,12 +66,22 @@ def main(cfg):
 
     train_data = pickle.load(open(os.path.join(cfg.dataset, 'raw/train.txt'), 'rb'))
     test_data = pickle.load(open(os.path.join(cfg.dataset, 'raw/test.txt'), 'rb'))
+    item_dict = json.load(open(os.path.join(cfg.dataset, 'item_dict.json'), 'r', encoding='utf-8'))
     # Build News Graph
     print("Building Graph")
     graph = build_entire_graph((train_data[0] + test_data[0], train_data[1] + test_data[1]))
     print("Original Graph built from all items:", len(graph.nodes))
 
-    graph.add_node("<pad>")
+    # padding node
+    assert(not graph.has_node(0))
+    graph.add_node(0)
+    # independent node
+    for i in range(len(item_dict)):
+        if not graph.has_node(i):
+            graph.add_node(i)
+            graph.add_edge(0, i, weight=1)
+            graph.add_edge(i, 0, weight=1)
+
     graph_path = os.path.join(cfg.dataset, "graph.bin")
     pickle.dump(graph, open(graph_path, 'wb'))
     # build neighbor dict

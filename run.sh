@@ -26,6 +26,13 @@ index/mrr
 python preprocess.py --dataset=diginetica
 python preprocess.py --dataset=yoochoose
 
+
+python build_global_graph.py --dataset=yoochoose1_64
+
+python build_global_graph.py --dataset=diginetica
+python build_datasets.py --dataset=diginetica --filetype=train
+python build_datasets.py --dataset=diginetica --filetype=test
+
 CUDA_VISIBLE_DEVICES=0 python main.py --dataset=diginetica
 CUDA_VISIBLE_DEVICES=0 python main.py --dataset=yoochoose1_64
 CUDA_VISIBLE_DEVICES=0 python main.py --dataset=yoochoose1_4
