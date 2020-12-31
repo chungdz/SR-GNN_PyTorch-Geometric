@@ -25,10 +25,15 @@ index/mrr
 
 python preprocess.py --dataset=diginetica
 python preprocess.py --dataset=yoochoose
+python preprocess_retailrocket.py
 
 python build_global_graph.py --dataset=yoochoose1_64
 python build_datasets.py --dataset=yoochoose1_64 --filetype=train
 python build_datasets.py --dataset=yoochoose1_64 --filetype=test
+
+python build_global_graph.py --dataset=retailrocket
+python build_datasets.py --dataset=retailrocket --filetype=train
+python build_datasets.py --dataset=retailrocket --filetype=test
 
 python build_global_graph.py --dataset=diginetica
 python build_datasets.py --dataset=diginetica --filetype=train
@@ -40,3 +45,4 @@ CUDA_VISIBLE_DEVICES=0 python main.py --dataset=yoochoose1_4
 
 CUDA_VISIBLE_DEVICES=0,1,2,3 python training.py --dataset=yoochoose1_64 --gpus=4
 CUDA_VISIBLE_DEVICES=0,1,2,3 python training.py --dataset=diginetica --gpus=4
+CUDA_VISIBLE_DEVICES=0,1,2,3 python training.py --dataset=retailrocket --gpus=4
